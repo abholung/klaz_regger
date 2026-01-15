@@ -8,14 +8,7 @@ from regger.config import Settings
 from regger.control import CancelToken
 from regger.providers.base import EmailCodeProvider
 from regger.providers.manual_sms import ManualSmsCodeProvider
-
-
-@dataclass(frozen=True)
-class BrowserAccountRecord:
-    email: str
-    phone: str
-    password: str
-    cookies: Dict[str, str]
+from regger.records import AccountRecord
 
 
 class BrowserRegistrationWorkflow:
@@ -30,7 +23,7 @@ class BrowserRegistrationWorkflow:
         self.cancel_token = cancel_token
         self.logger = logging.getLogger(__name__)
 
-    def run(self, email: str, phone: str, password: str) -> BrowserAccountRecord:
+    def run(self, email: str, phone: str, password: str) -> AccountRecord:
         if self.cancel_token:
             self.cancel_token.raise_if_cancelled()
         browser_config = self.settings.browser
@@ -87,9 +80,11 @@ class BrowserRegistrationWorkflow:
             cookies = {cookie["name"]: cookie["value"] for cookie in context.cookies()}
             browser.close()
 
-        return BrowserAccountRecord(
+        return AccountRecord(
             email=email,
             phone=phone,
+            user_id=None,
             password=password,
+            token=None,
             cookies=cookies,
         )

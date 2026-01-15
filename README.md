@@ -2,8 +2,7 @@
 
 Инструмент автоматизации регистрации для вашего сайта (email + телефон + подтверждения), с логированием, поддержкой прокси и возможностью прерывания по `Ctrl+C`.
 
-Доступны два режима:
-- **HTTP-режим**: использует API эндпоинты, polling кодов и сохраняет cookies HTTP-сессии.
+Доступен один режим:
 - **Браузерный режим**: использует Playwright для прохождения UI, получения cookies браузера и подтверждения email по ссылке.
 
 ## Архитектура
@@ -15,32 +14,17 @@
    - Загружает конфиг JSON.
    - Запускает поток регистрации и сохраняет результат.
 
-2. **Оркестратор (`regger/workflow.py`)**
-   - Реализует шаги:
-     1. регистрация
-     2. получение email-кода или ссылки из письма
-     3. подтверждение email
-     4. получение SMS-кода (polling или ручной ввод)
-     5. подтверждение телефона
-     6. запись результата (включая cookies)
-
-3. **HTTP-клиент (`regger/client.py`)**
-   - Унифицированные запросы в ваш API.
-   - Забирает `user_id` и `token` из ответа регистрации.
-
-4. **Провайдеры кодов (`regger/providers/*`)**
-   - Отдельные интерфейсы для email/SMS.
-   - HTTP-провайдеры поддерживают polling до получения кода.
+2. **Провайдеры кодов (`regger/providers/*`)**
    - IMAP-провайдер извлекает ссылку подтверждения из письма.
    - Ручной ввод SMS-кода доступен при необходимости.
 
-5. **Браузерный сценарий (`regger/browser_workflow.py`)**
+3. **Браузерный сценарий (`regger/browser_workflow.py`)**
    - Автоматизирует страницу регистрации в браузере.
    - Переходит по ссылке подтверждения из письма.
    - Вводит SMS-код вручную.
    - Экспортирует cookies браузера.
 
-6. **Хранилище (`regger/storage.py`)**
+4. **Хранилище (`regger/storage.py`)**
    - Сохраняет результат в CSV.
 
 ## Формат данных
@@ -66,15 +50,8 @@ user1@example.com,+15550000001,12345,MyPassword!,eyJhbGciOi...,"{\"sessionid\": 
 ```json
 {
   "base_url": "https://example.com",
-  "register_endpoint": "/api/register",
-  "confirm_email_endpoint": "/api/email/confirm",
-  "confirm_phone_endpoint": "/api/phone/confirm",
-  "email_code_endpoint": "/api/email/code?email={email}",
-  "sms_code_endpoint": "/api/sms/code?phone={phone}",
-  "email_confirmation_mode": "code",
+  "email_confirmation_mode": "link",
   "proxy": "",
-  "user_id_field": "user_id",
-  "token_field": "token",
   "imap": {
     "host": "imap.example.com",
     "port": 993,
@@ -101,7 +78,6 @@ user1@example.com,+15550000001,12345,MyPassword!,eyJhbGciOi...,"{\"sessionid\": 
 }
 ```
 
-`email_code_endpoint` и `sms_code_endpoint` поддерживают шаблоны `{email}`, `{phone}`, `{user_id}`.  
 Если `email_confirmation_mode` = `link`, будет использован IMAP для извлечения ссылки подтверждения.
 
 ### Браузерный режим
@@ -118,7 +94,7 @@ python -m playwright install
 3. Запустите:
 
 ```bash
-python -m regger.cli --config config.json --output data/output.csv --interactive --browser --email-mode link --manual-sms
+python -m regger.cli --config config.json --output data/output.csv --interactive --email-mode link
 ```
 
 ### Графический интерфейс (GUI)
@@ -133,28 +109,35 @@ python -m regger.gui
 - `config.json`
 - email/phone/password
 - прокси
-- режим подтверждения email
-- флаги браузерного режима и ручного ввода SMS
+- режим подтверждения email (фиксирован на link)
 - путь для сохранения CSV
 
 ### Сборка EXE (Windows)
 
 Если нужен единый `exe` с GUI, можно собрать через PyInstaller.
 
-1. Установите зависимости:
+1. Быстрый способ (батник):
+
+```bat
+build_exe.bat
+```
+
+Батник создаст виртуальное окружение, установит зависимости, Playwright и соберет `exe`.
+
+2. Ручная сборка:
 
 ```bash
 pip install -r requirements.txt
 pip install pyinstaller
 ```
 
-2. Соберите `exe`:
+3. Соберите `exe`:
 
 ```bash
 pyinstaller --noconsole --onefile -n regger_gui -m regger.gui
 ```
 
-3. Готовый файл будет в `dist/regger_gui.exe`.
+4. Готовый файл будет в `dist/regger_gui.exe`.
 
 > Примечание: если используется браузерный режим, Playwright и браузеры нужно установить на целевой машине (или включить их отдельно в дистрибутив). Для установки браузеров:
 >
@@ -168,43 +151,9 @@ pyinstaller --noconsole --onefile -n regger_gui -m regger.gui
 
 ```bash
 pip install -r requirements.txt
+python -m playwright install
 ```
 
-2. Скопируйте `config.example.json` в `config.json` и заполните реальные эндпоинты.
+2. Скопируйте `config.example.json` в `config.json` и заполните IMAP и селекторы формы.
 
-3. Подготовьте CSV с email/phone.
-
-4. Запустите:
-
-```bash
-python -m regger.cli --config config.json --input data/input.sample.csv --output data/output.csv
-```
-
-### Интерактивный режим (одноразовая регистрация)
-
-```bash
-python -m regger.cli --config config.json --output data/output.csv --interactive
-```
-
-### Прокси
-
-```bash
-python -m regger.cli --config config.json --input data/input.sample.csv --output data/output.csv --proxy "http://user:pass@host:port"
-```
-
-### Подтверждение email по ссылке + ручной ввод SMS
-
-```bash
-python -m regger.cli --config config.json --input data/input.sample.csv --output data/output.csv --email-mode link --manual-sms
-```
-
-При желании можно задать фиксированный пароль:
-
-```bash
-python -m regger.cli --config config.json --input data/input.sample.csv --output data/output.csv --password "SuperSecret123!"
-```
-
-## Расширение
-
-- Добавьте новые провайдеры email/SMS для интеграций с внешними сервисами.
-- Реализуйте ретраи/лимиты/параллельную обработку при необходимости.
+3. Запустите GUI или CLI (браузерный режим).

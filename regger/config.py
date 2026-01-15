@@ -38,15 +38,8 @@ class BrowserConfig:
 @dataclass(frozen=True)
 class Settings:
     base_url: str
-    register_endpoint: str
-    confirm_email_endpoint: str
-    confirm_phone_endpoint: str
-    email_code_endpoint: str
-    sms_code_endpoint: str
     email_confirmation_mode: str = "code"
     proxy: str | None = None
-    user_id_field: str = "user_id"
-    token_field: str = "token"
     polling: PollingConfig = PollingConfig()
     imap: ImapConfig = ImapConfig()
     browser: BrowserConfig = BrowserConfig()
@@ -82,15 +75,8 @@ class Settings:
         )
         return Settings(
             base_url=raw["base_url"],
-            register_endpoint=raw["register_endpoint"],
-            confirm_email_endpoint=raw["confirm_email_endpoint"],
-            confirm_phone_endpoint=raw["confirm_phone_endpoint"],
-            email_code_endpoint=raw["email_code_endpoint"],
-            sms_code_endpoint=raw["sms_code_endpoint"],
             email_confirmation_mode=raw.get("email_confirmation_mode", "code"),
             proxy=raw.get("proxy"),
-            user_id_field=raw.get("user_id_field", "user_id"),
-            token_field=raw.get("token_field", "token"),
             polling=polling,
             imap=imap,
             browser=browser,

@@ -9,16 +9,12 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
-from regger.client import RegistrationClient
 from regger.browser_workflow import BrowserRegistrationWorkflow
 from regger.config import Settings
 from regger.control import CancelToken, CancelledError
-from regger.providers.http_email import HttpEmailCodeProvider
-from regger.providers.http_sms import HttpSmsCodeProvider
 from regger.providers.imap_email import ImapEmailLinkProvider
-from regger.providers.manual_sms import ManualSmsCodeProvider
 from regger.storage import AccountStore
-from regger.workflow import AccountRecord, RegistrationWorkflow
+from regger.records import AccountRecord
 
 
 def load_inputs(path: str | Path) -> List[Tuple[str, str]]:
@@ -59,53 +55,12 @@ def run_workflow(
     inputs: Iterable[Tuple[str, str]],
     password: str | None,
     password_length: int,
-    manual_sms: bool,
     cancel_token: CancelToken,
-    browser_mode: bool,
 ) -> List[AccountRecord]:
-    if browser_mode:
-        if settings.email_confirmation_mode != "link":
-            raise ValueError("Browser mode requires email confirmation by link.")
-        email_provider = ImapEmailLinkProvider(settings, cancel_token=cancel_token)
-        workflow = BrowserRegistrationWorkflow(settings, email_provider, cancel_token=cancel_token)
-        results: List[AccountRecord] = []
-        for email, phone in inputs:
-            current_password = password or generate_password(password_length)
-            record = workflow.run(email=email, phone=phone, password=current_password)
-            results.append(
-                AccountRecord(
-                    email=record.email,
-                    phone=record.phone,
-                    user_id=None,
-                    password=record.password,
-                    token=None,
-                    cookies=record.cookies,
-                )
-            )
-        return results
-    client = RegistrationClient(settings)
-    if settings.proxy:
-        client.session.proxies.update({"http": settings.proxy, "https": settings.proxy})
-    if settings.email_confirmation_mode == "link":
-        email_provider = ImapEmailLinkProvider(settings, cancel_token=cancel_token)
-    else:
-        email_provider = HttpEmailCodeProvider(
-            settings, session=client.session, cancel_token=cancel_token
-        )
-    if manual_sms:
-        sms_provider = ManualSmsCodeProvider()
-    else:
-        sms_provider = HttpSmsCodeProvider(
-            settings, session=client.session, cancel_token=cancel_token
-        )
-    workflow = RegistrationWorkflow(
-        client,
-        email_provider,
-        sms_provider,
-        email_confirmation_mode=settings.email_confirmation_mode,
-        cancel_token=cancel_token,
-    )
-
+    if settings.email_confirmation_mode != "link":
+        raise ValueError("Browser mode requires email confirmation by link.")
+    email_provider = ImapEmailLinkProvider(settings, cancel_token=cancel_token)
+    workflow = BrowserRegistrationWorkflow(settings, email_provider, cancel_token=cancel_token)
     results: List[AccountRecord] = []
     for email, phone in inputs:
         current_password = password or generate_password(password_length)
@@ -128,16 +83,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--email-mode",
         choices=["code", "link"],
         help="Email confirmation mode: code or link (overrides config)",
-    )
-    parser.add_argument(
-        "--manual-sms",
-        action="store_true",
-        help="Ask for SMS code manually instead of polling SMS endpoint",
-    )
-    parser.add_argument(
-        "--browser",
-        action="store_true",
-        help="Run browser-based registration flow using Playwright",
     )
     parser.add_argument(
         "--interactive",
@@ -188,9 +133,7 @@ def main() -> None:
             inputs,
             args.password,
             args.password_length,
-            args.manual_sms,
             cancel_token,
-            args.browser,
         )
     except CancelledError:
         logging.getLogger(__name__).warning("Операция отменена пользователем.")

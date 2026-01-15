@@ -1,14 +1,7 @@
 {
   "base_url": "https://example.com",
-  "register_endpoint": "/api/register",
-  "confirm_email_endpoint": "/api/email/confirm",
-  "confirm_phone_endpoint": "/api/phone/confirm",
-  "email_code_endpoint": "/api/email/code?email={email}",
-  "sms_code_endpoint": "/api/sms/code?phone={phone}",
-  "email_confirmation_mode": "code",
+  "email_confirmation_mode": "link",
   "proxy": "",
-  "user_id_field": "user_id",
-  "token_field": "token",
   "imap": {
     "host": "imap.example.com",
     "port": 993,

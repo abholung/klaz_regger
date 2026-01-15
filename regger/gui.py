@@ -10,7 +10,7 @@ from regger.cli import configure_logging, run_workflow
 from regger.config import Settings
 from regger.control import CancelToken, CancelledError
 from regger.storage import AccountStore
-from regger.workflow import AccountRecord
+from regger.records import AccountRecord
 
 
 class TextHandler:
@@ -40,9 +40,6 @@ class App:
         self.phone = tk.StringVar()
         self.password = tk.StringVar()
         self.proxy = tk.StringVar()
-        self.browser_mode = tk.BooleanVar(value=True)
-        self.manual_sms = tk.BooleanVar(value=True)
-        self.email_mode = tk.StringVar(value="link")
         self.log_level = tk.StringVar(value="INFO")
 
         self._build()
@@ -86,10 +83,9 @@ class App:
         )
         ttk.Entry(frame, textvariable=self.proxy, width=50).grid(row=5, column=1, **padding)
 
-        ttk.Label(frame, text="Email режим").grid(row=6, column=0, sticky="w", **padding)
-        ttk.Combobox(
-            frame, textvariable=self.email_mode, values=["code", "link"], width=47
-        ).grid(row=6, column=1, **padding)
+        ttk.Label(frame, text="Email режим: link (фиксировано)").grid(
+            row=6, column=0, sticky="w", **padding
+        )
 
         ttk.Label(frame, text="Лог уровень").grid(row=7, column=0, sticky="w", **padding)
         ttk.Combobox(
@@ -99,11 +95,8 @@ class App:
             width=47,
         ).grid(row=7, column=1, **padding)
 
-        ttk.Checkbutton(frame, text="Браузерный режим", variable=self.browser_mode).grid(
+        ttk.Label(frame, text="Браузерный режим включен (фиксировано)").grid(
             row=8, column=0, sticky="w", **padding
-        )
-        ttk.Checkbutton(frame, text="Ручной ввод SMS", variable=self.manual_sms).grid(
-            row=8, column=1, sticky="w", **padding
         )
 
         button_frame = ttk.Frame(frame)
@@ -155,8 +148,7 @@ class App:
             settings = Settings.from_json(self.config_path.get())
             if self.proxy.get().strip():
                 settings = replace(settings, proxy=self.proxy.get().strip())
-            if self.email_mode.get().strip():
-                settings = replace(settings, email_confirmation_mode=self.email_mode.get().strip())
+            settings = replace(settings, email_confirmation_mode="link")
 
             inputs: List[tuple[str, str]] = [(self.email.get().strip(), self.phone.get().strip())]
             records = run_workflow(
@@ -164,9 +156,7 @@ class App:
                 inputs,
                 self.password.get().strip() or None,
                 password_length=12,
-                manual_sms=self.manual_sms.get(),
                 cancel_token=self.cancel_token,
-                browser_mode=self.browser_mode.get(),
             )
             store = AccountStore(self.output_path.get())
             store.write(records)

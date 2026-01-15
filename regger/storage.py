@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from regger.workflow import AccountRecord
+from regger.records import AccountRecord
 
 
 class AccountStore:
