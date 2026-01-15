@@ -99,6 +99,7 @@ python -m regger.gui
 ```
 
 В GUI можно указать:
+- config.json (путь к файлу с селекторами формы)
 - email/phone
 - прокси
 - код страны

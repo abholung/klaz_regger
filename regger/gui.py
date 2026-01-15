@@ -36,6 +36,7 @@ class App:
         self.cancel_token = CancelToken()
         self.worker: threading.Thread | None = None
 
+        self.config_path = tk.StringVar(value="config.json")
         self.email = tk.StringVar()
         self.phone = tk.StringVar()
         self.password = tk.StringVar()
@@ -51,65 +52,78 @@ class App:
         frame = ttk.Frame(self.root)
         frame.pack(fill="both", expand=True)
 
-        ttk.Label(frame, text="Email").grid(row=0, column=0, sticky="w", **padding)
-        ttk.Entry(frame, textvariable=self.email, width=50).grid(row=0, column=1, **padding)
+        ttk.Label(frame, text="Config файл").grid(row=0, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.config_path, width=50).grid(
+            row=0, column=1, **padding
+        )
+        ttk.Button(frame, text="Выбрать", command=self._pick_config).grid(
+            row=0, column=2, **padding
+        )
 
-        ttk.Label(frame, text="Телефон").grid(row=1, column=0, sticky="w", **padding)
-        ttk.Entry(frame, textvariable=self.phone, width=50).grid(row=1, column=1, **padding)
+        ttk.Label(frame, text="Email").grid(row=1, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.email, width=50).grid(row=1, column=1, **padding)
+
+        ttk.Label(frame, text="Телефон").grid(row=2, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.phone, width=50).grid(row=2, column=1, **padding)
 
         ttk.Label(frame, text="Код страны (например NL или +31)").grid(
-            row=2, column=0, sticky="w", **padding
+            row=3, column=0, sticky="w", **padding
         )
         ttk.Entry(frame, textvariable=self.country_code, width=50).grid(
-            row=2, column=1, **padding
+            row=3, column=1, **padding
         )
 
         ttk.Label(frame, text="Пароль (авто, 8+ символов)").grid(
-            row=3, column=0, sticky="w", **padding
+            row=4, column=0, sticky="w", **padding
         )
         ttk.Entry(frame, textvariable=self.password, width=50, show="*").grid(
-            row=3, column=1, **padding
+            row=4, column=1, **padding
         )
         ttk.Label(frame, text="(если пусто — пароль будет сгенерирован)").grid(
-            row=3, column=2, sticky="w", **padding
+            row=4, column=2, sticky="w", **padding
         )
 
         ttk.Label(frame, text="Прокси (опционально)").grid(
-            row=4, column=0, sticky="w", **padding
+            row=5, column=0, sticky="w", **padding
         )
-        ttk.Entry(frame, textvariable=self.proxy, width=50).grid(row=4, column=1, **padding)
+        ttk.Entry(frame, textvariable=self.proxy, width=50).grid(row=5, column=1, **padding)
 
-        ttk.Label(frame, text="Папка для cookies").grid(row=5, column=0, sticky="w", **padding)
+        ttk.Label(frame, text="Папка для cookies").grid(row=6, column=0, sticky="w", **padding)
         ttk.Entry(frame, textvariable=self.cookies_dir, width=50).grid(
-            row=5, column=1, **padding
+            row=6, column=1, **padding
         )
         ttk.Button(frame, text="Выбрать", command=self._pick_cookies_dir).grid(
-            row=5, column=2, **padding
+            row=6, column=2, **padding
         )
 
         ttk.Label(frame, text="Email режим: link (фиксировано)").grid(
-            row=6, column=0, sticky="w", **padding
+            row=7, column=0, sticky="w", **padding
         )
 
-        ttk.Label(frame, text="Лог уровень").grid(row=7, column=0, sticky="w", **padding)
+        ttk.Label(frame, text="Лог уровень").grid(row=8, column=0, sticky="w", **padding)
         ttk.Combobox(
             frame,
             textvariable=self.log_level,
             values=["DEBUG", "INFO", "WARNING", "ERROR"],
             width=47,
-        ).grid(row=7, column=1, **padding)
+        ).grid(row=8, column=1, **padding)
 
         ttk.Label(frame, text="Браузерный режим включен (фиксировано)").grid(
-            row=8, column=0, sticky="w", **padding
+            row=9, column=0, sticky="w", **padding
         )
 
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=9, column=0, columnspan=3, sticky="w", **padding)
+        button_frame.grid(row=10, column=0, columnspan=3, sticky="w", **padding)
         ttk.Button(button_frame, text="Старт", command=self.start).pack(side="left", padx=4)
         ttk.Button(button_frame, text="Отмена", command=self.cancel).pack(side="left", padx=4)
 
         self.log_widget = tk.Text(frame, height=12, width=80, state="disabled")
-        self.log_widget.grid(row=10, column=0, columnspan=3, **padding)
+        self.log_widget.grid(row=11, column=0, columnspan=3, **padding)
+
+    def _pick_config(self) -> None:
+        path = filedialog.askopenfilename(title="Выберите config.json", filetypes=[("JSON", "*.json")])
+        if path:
+            self.config_path.set(path)
 
     def _pick_cookies_dir(self) -> None:
         path = filedialog.askdirectory(title="Папка для cookies")
@@ -140,7 +154,12 @@ class App:
         configure_logging(self.log_level.get())
         log_sink = TextHandler(self.log_widget)
         try:
-            settings = Settings.from_json("config.json")
+            config_path = Path(self.config_path.get())
+            if not config_path.exists():
+                raise FileNotFoundError(
+                    f"Файл не найден: {config_path}. Укажите корректный config.json."
+                )
+            settings = Settings.from_json(config_path)
             if self.proxy.get().strip():
                 settings = replace(settings, proxy=self.proxy.get().strip())
             settings = replace(settings, email_confirmation_mode="link")
