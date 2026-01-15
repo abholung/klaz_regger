@@ -1,0 +1,34 @@
+{
+  "base_url": "https://www.kleinanzeigen.de/",
+  "email_confirmation_mode": "link",
+  "proxy": "portal.anyip.io:1080:user_e1f71f,type_mobile,country_DE,session_7284d267:111111",
+  "imap": {
+    "host": "imap.example.com",
+    "port": 993,
+    "user": "user@example.com",
+    "password": "app-password",
+    "folder": "INBOX",
+    "link_regex": "https://example.com/confirm\\?token=[A-Za-z0-9._-]+"
+  },
+  "browser": {
+    "register_url": "https://www.kleinanzeigen.de/m-benutzer-anmeldung.html",
+    "email_selector": "#email",
+    "password_selector": "#password",
+    "submit_selector": "button[type=submit]",
+    "account_type_selector": "#account-type",
+    "account_type_value": "Privat",
+    "name_selector": "#account-name",
+    "name_value": "Privat",
+    "phone_selector": "#phone",
+    "phone_submit_selector": "#phone-submit",
+    "country_selector": "#country-code",
+    "sms_code_selector": "#sms_code",
+    "sms_submit_selector": "#sms-submit",
+    "change_number_selector": "#change-number",
+    "phone_stage": "after_email_confirm"
+  },
+  "polling": {
+    "interval_seconds": 5,
+    "timeout_seconds": 180
+  }
+}
