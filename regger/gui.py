@@ -1,0 +1,187 @@
+from __future__ import annotations
+
+import threading
+import tkinter as tk
+from dataclasses import replace
+from tkinter import filedialog, messagebox, ttk
+from typing import List
+
+from regger.cli import configure_logging, run_workflow
+from regger.config import Settings
+from regger.control import CancelToken, CancelledError
+from regger.storage import AccountStore
+from regger.workflow import AccountRecord
+
+
+class TextHandler:
+    def __init__(self, widget: tk.Text) -> None:
+        self.widget = widget
+
+    def write(self, message: str) -> None:
+        self.widget.configure(state="normal")
+        self.widget.insert(tk.END, message)
+        self.widget.see(tk.END)
+        self.widget.configure(state="disabled")
+
+    def flush(self) -> None:
+        return None
+
+
+class App:
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title("Regger GUI")
+        self.cancel_token = CancelToken()
+        self.worker: threading.Thread | None = None
+
+        self.config_path = tk.StringVar(value="config.json")
+        self.output_path = tk.StringVar(value="data/output.csv")
+        self.email = tk.StringVar()
+        self.phone = tk.StringVar()
+        self.password = tk.StringVar()
+        self.proxy = tk.StringVar()
+        self.browser_mode = tk.BooleanVar(value=True)
+        self.manual_sms = tk.BooleanVar(value=True)
+        self.email_mode = tk.StringVar(value="link")
+        self.log_level = tk.StringVar(value="INFO")
+
+        self._build()
+
+    def _build(self) -> None:
+        padding = {"padx": 8, "pady": 4}
+        frame = ttk.Frame(self.root)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Config файл").grid(row=0, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.config_path, width=50).grid(
+            row=0, column=1, **padding
+        )
+        ttk.Button(frame, text="Выбрать", command=self._pick_config).grid(
+            row=0, column=2, **padding
+        )
+
+        ttk.Label(frame, text="Output CSV").grid(row=1, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.output_path, width=50).grid(
+            row=1, column=1, **padding
+        )
+        ttk.Button(frame, text="Выбрать", command=self._pick_output).grid(
+            row=1, column=2, **padding
+        )
+
+        ttk.Label(frame, text="Email").grid(row=2, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.email, width=50).grid(row=2, column=1, **padding)
+
+        ttk.Label(frame, text="Телефон").grid(row=3, column=0, sticky="w", **padding)
+        ttk.Entry(frame, textvariable=self.phone, width=50).grid(row=3, column=1, **padding)
+
+        ttk.Label(frame, text="Пароль (опционально)").grid(
+            row=4, column=0, sticky="w", **padding
+        )
+        ttk.Entry(frame, textvariable=self.password, width=50, show="*").grid(
+            row=4, column=1, **padding
+        )
+
+        ttk.Label(frame, text="Прокси (опционально)").grid(
+            row=5, column=0, sticky="w", **padding
+        )
+        ttk.Entry(frame, textvariable=self.proxy, width=50).grid(row=5, column=1, **padding)
+
+        ttk.Label(frame, text="Email режим").grid(row=6, column=0, sticky="w", **padding)
+        ttk.Combobox(
+            frame, textvariable=self.email_mode, values=["code", "link"], width=47
+        ).grid(row=6, column=1, **padding)
+
+        ttk.Label(frame, text="Лог уровень").grid(row=7, column=0, sticky="w", **padding)
+        ttk.Combobox(
+            frame,
+            textvariable=self.log_level,
+            values=["DEBUG", "INFO", "WARNING", "ERROR"],
+            width=47,
+        ).grid(row=7, column=1, **padding)
+
+        ttk.Checkbutton(frame, text="Браузерный режим", variable=self.browser_mode).grid(
+            row=8, column=0, sticky="w", **padding
+        )
+        ttk.Checkbutton(frame, text="Ручной ввод SMS", variable=self.manual_sms).grid(
+            row=8, column=1, sticky="w", **padding
+        )
+
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=9, column=0, columnspan=3, sticky="w", **padding)
+        ttk.Button(button_frame, text="Старт", command=self.start).pack(side="left", padx=4)
+        ttk.Button(button_frame, text="Отмена", command=self.cancel).pack(side="left", padx=4)
+
+        self.log_widget = tk.Text(frame, height=12, width=80, state="disabled")
+        self.log_widget.grid(row=10, column=0, columnspan=3, **padding)
+
+    def _pick_config(self) -> None:
+        path = filedialog.askopenfilename(title="Выберите config.json", filetypes=[("JSON", "*.json")])
+        if path:
+            self.config_path.set(path)
+
+    def _pick_output(self) -> None:
+        path = filedialog.asksaveasfilename(
+            title="Сохранить CSV",
+            defaultextension=".csv",
+            filetypes=[("CSV", "*.csv")],
+        )
+        if path:
+            self.output_path.set(path)
+
+    def start(self) -> None:
+        if self.worker and self.worker.is_alive():
+            messagebox.showwarning("Regger", "Процесс уже запущен")
+            return
+        if not self.email.get().strip() or not self.phone.get().strip():
+            messagebox.showwarning("Regger", "Введите email и телефон")
+            return
+        self.cancel_token = CancelToken()
+        self._clear_log()
+        self.worker = threading.Thread(target=self._run, daemon=True)
+        self.worker.start()
+
+    def cancel(self) -> None:
+        self.cancel_token.cancel()
+
+    def _clear_log(self) -> None:
+        self.log_widget.configure(state="normal")
+        self.log_widget.delete("1.0", tk.END)
+        self.log_widget.configure(state="disabled")
+
+    def _run(self) -> None:
+        configure_logging(self.log_level.get())
+        log_sink = TextHandler(self.log_widget)
+        try:
+            settings = Settings.from_json(self.config_path.get())
+            if self.proxy.get().strip():
+                settings = replace(settings, proxy=self.proxy.get().strip())
+            if self.email_mode.get().strip():
+                settings = replace(settings, email_confirmation_mode=self.email_mode.get().strip())
+
+            inputs: List[tuple[str, str]] = [(self.email.get().strip(), self.phone.get().strip())]
+            records = run_workflow(
+                settings,
+                inputs,
+                self.password.get().strip() or None,
+                password_length=12,
+                manual_sms=self.manual_sms.get(),
+                cancel_token=self.cancel_token,
+                browser_mode=self.browser_mode.get(),
+            )
+            store = AccountStore(self.output_path.get())
+            store.write(records)
+            log_sink.write("Готово. Результаты сохранены.\n")
+        except CancelledError:
+            log_sink.write("Операция отменена пользователем.\n")
+        except Exception as exc:  # pylint: disable=broad-except
+            log_sink.write(f"Ошибка: {exc}\n")
+
+
+def main() -> None:
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
