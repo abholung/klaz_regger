@@ -9,6 +9,7 @@ from regger.control import CancelToken
 from regger.providers.base import EmailCodeProvider
 from regger.providers.manual_sms import ManualSmsCodeProvider
 from regger.records import AccountRecord
+from regger.utils import parse_proxy
 
 
 class BrowserRegistrationWorkflow:
@@ -45,9 +46,7 @@ class BrowserRegistrationWorkflow:
 
         from playwright.sync_api import sync_playwright
 
-        proxy = None
-        if self.settings.proxy:
-            proxy = {"server": self.settings.proxy}
+        proxy = {"server": parse_proxy(self.settings.proxy or "")}
 
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True, proxy=proxy)

@@ -42,7 +42,6 @@ class App:
         self.password = tk.StringVar()
         self.proxy = tk.StringVar()
         self.country_code = tk.StringVar()
-        self.cookies_dir = tk.StringVar(value="cookies")
         self.log_level = tk.StringVar(value="INFO")
 
         self._build()
@@ -83,52 +82,39 @@ class App:
             row=4, column=2, sticky="w", **padding
         )
 
-        ttk.Label(frame, text="Прокси (опционально)").grid(
+        ttk.Label(frame, text="Прокси (обязательно)").grid(
             row=5, column=0, sticky="w", **padding
         )
         ttk.Entry(frame, textvariable=self.proxy, width=50).grid(row=5, column=1, **padding)
 
-        ttk.Label(frame, text="Папка для cookies").grid(row=6, column=0, sticky="w", **padding)
-        ttk.Entry(frame, textvariable=self.cookies_dir, width=50).grid(
-            row=6, column=1, **padding
-        )
-        ttk.Button(frame, text="Выбрать", command=self._pick_cookies_dir).grid(
-            row=6, column=2, **padding
-        )
-
         ttk.Label(frame, text="Email режим: link (фиксировано)").grid(
-            row=7, column=0, sticky="w", **padding
+            row=6, column=0, sticky="w", **padding
         )
 
-        ttk.Label(frame, text="Лог уровень").grid(row=8, column=0, sticky="w", **padding)
+        ttk.Label(frame, text="Лог уровень").grid(row=7, column=0, sticky="w", **padding)
         ttk.Combobox(
             frame,
             textvariable=self.log_level,
             values=["DEBUG", "INFO", "WARNING", "ERROR"],
             width=47,
-        ).grid(row=8, column=1, **padding)
+        ).grid(row=7, column=1, **padding)
 
         ttk.Label(frame, text="Браузерный режим включен (фиксировано)").grid(
-            row=9, column=0, sticky="w", **padding
+            row=8, column=0, sticky="w", **padding
         )
 
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=10, column=0, columnspan=3, sticky="w", **padding)
+        button_frame.grid(row=9, column=0, columnspan=3, sticky="w", **padding)
         ttk.Button(button_frame, text="Старт", command=self.start).pack(side="left", padx=4)
         ttk.Button(button_frame, text="Отмена", command=self.cancel).pack(side="left", padx=4)
 
         self.log_widget = tk.Text(frame, height=12, width=80, state="disabled")
-        self.log_widget.grid(row=11, column=0, columnspan=3, **padding)
+        self.log_widget.grid(row=10, column=0, columnspan=3, **padding)
 
     def _pick_config(self) -> None:
         path = filedialog.askopenfilename(title="Выберите config.json", filetypes=[("JSON", "*.json")])
         if path:
             self.config_path.set(path)
-
-    def _pick_cookies_dir(self) -> None:
-        path = filedialog.askdirectory(title="Папка для cookies")
-        if path:
-            self.cookies_dir.set(path)
 
     def start(self) -> None:
         if self.worker and self.worker.is_alive():
@@ -136,6 +122,9 @@ class App:
             return
         if not self.email.get().strip() or not self.phone.get().strip():
             messagebox.showwarning("Regger", "Введите email и телефон")
+            return
+        if not self.proxy.get().strip():
+            messagebox.showwarning("Regger", "Прокси обязателен")
             return
         self.cancel_token = CancelToken()
         self._clear_log()
@@ -160,12 +149,11 @@ class App:
                     f"Файл не найден: {config_path}. Укажите корректный config.json."
                 )
             settings = Settings.from_json(config_path)
-            if self.proxy.get().strip():
-                settings = replace(settings, proxy=self.proxy.get().strip())
+            settings = replace(settings, proxy=self.proxy.get().strip())
             settings = replace(settings, email_confirmation_mode="link")
 
             inputs: List[tuple[str, str]] = [(self.email.get().strip(), self.phone.get().strip())]
-            cookies_folder = Path(self.cookies_dir.get() or "cookies")
+            cookies_folder = config_path.parent / "cookies"
             records = run_workflow(
                 settings,
                 inputs,
@@ -199,7 +187,8 @@ class App:
         folder.mkdir(parents=True, exist_ok=True)
         for record in records:
             safe_email = record.email.replace("@", "_at_").replace(".", "_")
-            path = folder / f"{safe_email}.json"
+            safe_password = record.password.replace(":", "_").replace("/", "_")
+            path = folder / f"{safe_email}__{safe_password}.json"
             path.write_text(json.dumps(record.cookies, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

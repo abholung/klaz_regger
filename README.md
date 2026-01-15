@@ -13,7 +13,7 @@
    - Принимает email/телефон/прокси/код страны.
    - Пароль генерируется автоматически (8 символов, 1 заглавная, 1 строчная, 1 число, 1 спецсимвол).
    - Показывает окна для ввода ссылки и SMS-кода, включая смену номера.
-   - Сохраняет cookies в отдельную папку.
+   - Сохраняет cookies в папку `cookies` рядом с `config.json`.
 
 2. **Провайдеры кодов (`regger/providers/*`)**
    - IMAP-провайдер извлекает ссылку подтверждения из письма.
@@ -32,7 +32,7 @@
 
 ### Cookies
 
-Cookies сохраняются отдельными файлами JSON в папку, указанную в GUI.
+Cookies сохраняются отдельными файлами JSON в папку `cookies` рядом с `config.json`.
 
 ## Конфигурация
 
@@ -40,9 +40,9 @@ Cookies сохраняются отдельными файлами JSON в па�
 
 ```json
 {
-  "base_url": "https://example.com",
+  "base_url": "https://www.kleinanzeigen.de/",
   "email_confirmation_mode": "link",
-  "proxy": "",
+  "proxy": "portal.anyip.io:1080:user_e1f71f,type_mobile,country_DE,session_7284d267:111111",
   "imap": {
     "host": "imap.example.com",
     "port": 993,
@@ -52,7 +52,7 @@ Cookies сохраняются отдельными файлами JSON в па�
     "link_regex": "https://example.com/confirm\\?token=[A-Za-z0-9._-]+"
   },
   "browser": {
-    "register_url": "https://example.com/register",
+    "register_url": "https://www.kleinanzeigen.de/m-benutzer-anmeldung.html",
     "email_selector": "#email",
     "password_selector": "#password",
     "submit_selector": "button[type=submit]",
@@ -101,9 +101,8 @@ python -m regger.gui
 В GUI можно указать:
 - config.json (путь к файлу с селекторами формы)
 - email/phone
-- прокси
+- прокси (обязателен, формат `host:port:user:pass`)
 - код страны
-- папку для cookies
 
 В окне ввода SMS можно написать `change`, чтобы перейти к смене номера (если задан `change_number_selector`).
 
@@ -117,7 +116,7 @@ python -m regger.gui
 build_exe.bat
 ```
 
-Батник создаст виртуальное окружение, установит зависимости, Playwright и соберет `exe`.
+Батник создаст виртуальное окружение, установит зависимости, Playwright (внутрь сборки) и соберет `exe`.
 
 2. Ручная сборка:
 
@@ -134,7 +133,7 @@ pyinstaller --noconsole --onefile -n regger_gui regger/gui.py
 
 4. Готовый файл будет в `dist/regger_gui.exe`.
 
-> Примечание: если используется браузерный режим, Playwright и браузеры нужно установить на целевой машине (или включить их отдельно в дистрибутив). Для установки браузеров:
+> Примечание: для EXE браузеры Playwright включаются через `PLAYWRIGHT_BROWSERS_PATH=0` в батнике, чтобы не требовать отдельной установки на целевой машине.
 >
 > ```bash
 > python -m playwright install

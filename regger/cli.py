@@ -102,7 +102,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--password", help="Use fixed password for all accounts")
     parser.add_argument(
         "--proxy",
-        help="Proxy URL, e.g. http://user:pass@host:port (overrides config)",
+        required=True,
+        help="Proxy URL or host:port:user:pass (required)",
     )
     parser.add_argument(
         "--email-mode",
@@ -138,8 +139,7 @@ def main() -> None:
 
     configure_logging(args.log_level)
     settings = Settings.from_json(args.config)
-    if args.proxy:
-        settings = replace(settings, proxy=args.proxy)
+    settings = replace(settings, proxy=args.proxy)
     if args.email_mode:
         settings = replace(settings, email_confirmation_mode=args.email_mode)
     if args.interactive:

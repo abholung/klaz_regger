@@ -1,7 +1,7 @@
 {
-  "base_url": "https://example.com",
+  "base_url": "https://www.kleinanzeigen.de/",
   "email_confirmation_mode": "link",
-  "proxy": "",
+  "proxy": "portal.anyip.io:1080:user_e1f71f,type_mobile,country_DE,session_7284d267:111111",
   "imap": {
     "host": "imap.example.com",
     "port": 993,
@@ -11,7 +11,7 @@
     "link_regex": "https://example.com/confirm\\?token=[A-Za-z0-9._-]+"
   },
   "browser": {
-    "register_url": "https://example.com/register",
+    "register_url": "https://www.kleinanzeigen.de/m-benutzer-anmeldung.html",
     "email_selector": "#email",
     "password_selector": "#password",
     "submit_selector": "button[type=submit]",
