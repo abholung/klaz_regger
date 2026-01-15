@@ -134,7 +134,7 @@ pip install pyinstaller
 3. Соберите `exe`:
 
 ```bash
-pyinstaller --noconsole --onefile -n regger_gui -m regger.gui
+pyinstaller --noconsole --onefile -n regger_gui regger/gui.py
 ```
 
 4. Готовый файл будет в `dist/regger_gui.exe`.

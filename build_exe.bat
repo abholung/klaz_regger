@@ -9,7 +9,7 @@ pip install -r requirements.txt
 pip install pyinstaller
 python -m playwright install
 
-pyinstaller --noconsole --onefile -n regger_gui -m regger.gui
+pyinstaller --noconsole --onefile -n regger_gui regger\gui.py
 
 echo.
 echo Build complete. EXE is at dist\regger_gui.exe
