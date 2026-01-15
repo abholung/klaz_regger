@@ -137,6 +137,31 @@ python -m regger.gui
 - флаги браузерного режима и ручного ввода SMS
 - путь для сохранения CSV
 
+### Сборка EXE (Windows)
+
+Если нужен единый `exe` с GUI, можно собрать через PyInstaller.
+
+1. Установите зависимости:
+
+```bash
+pip install -r requirements.txt
+pip install pyinstaller
+```
+
+2. Соберите `exe`:
+
+```bash
+pyinstaller --noconsole --onefile -n regger_gui -m regger.gui
+```
+
+3. Готовый файл будет в `dist/regger_gui.exe`.
+
+> Примечание: если используется браузерный режим, Playwright и браузеры нужно установить на целевой машине (или включить их отдельно в дистрибутив). Для установки браузеров:
+>
+> ```bash
+> python -m playwright install
+> ```
+
 ## Запуск
 
 1. Установите зависимости:
