@@ -28,10 +28,16 @@ class BrowserConfig:
     email_selector: str = ""
     password_selector: str = ""
     submit_selector: str = ""
+    account_type_selector: str = ""
+    account_type_value: str = ""
+    name_selector: str = ""
+    name_value: str = "Privat"
     phone_selector: str = ""
     phone_submit_selector: str = ""
+    country_selector: str = ""
     sms_code_selector: str = ""
     sms_submit_selector: str = ""
+    change_number_selector: str = ""
     phone_stage: str = "after_email_confirm"
 
 
@@ -67,10 +73,16 @@ class Settings:
             email_selector=browser_raw.get("email_selector", ""),
             password_selector=browser_raw.get("password_selector", ""),
             submit_selector=browser_raw.get("submit_selector", ""),
+            account_type_selector=browser_raw.get("account_type_selector", ""),
+            account_type_value=browser_raw.get("account_type_value", ""),
+            name_selector=browser_raw.get("name_selector", ""),
+            name_value=browser_raw.get("name_value", "Privat"),
             phone_selector=browser_raw.get("phone_selector", ""),
             phone_submit_selector=browser_raw.get("phone_submit_selector", ""),
+            country_selector=browser_raw.get("country_selector", ""),
             sms_code_selector=browser_raw.get("sms_code_selector", ""),
             sms_submit_selector=browser_raw.get("sms_submit_selector", ""),
+            change_number_selector=browser_raw.get("change_number_selector", ""),
             phone_stage=browser_raw.get("phone_stage", "after_email_confirm"),
         )
         return Settings(

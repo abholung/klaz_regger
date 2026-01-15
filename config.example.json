@@ -15,10 +15,16 @@
     "email_selector": "#email",
     "password_selector": "#password",
     "submit_selector": "button[type=submit]",
+    "account_type_selector": "#account-type",
+    "account_type_value": "Privat",
+    "name_selector": "#account-name",
+    "name_value": "Privat",
     "phone_selector": "#phone",
     "phone_submit_selector": "#phone-submit",
+    "country_selector": "#country-code",
     "sms_code_selector": "#sms_code",
     "sms_submit_selector": "#sms-submit",
+    "change_number_selector": "#change-number",
     "phone_stage": "after_email_confirm"
   },
   "polling": {

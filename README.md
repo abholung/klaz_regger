@@ -9,10 +9,11 @@
 
 **Слои проекта:**
 
-1. **CLI (`regger/cli.py`)**
-   - Читает входной CSV (email, phone).
-   - Загружает конфиг JSON.
-   - Запускает поток регистрации и сохраняет результат.
+1. **GUI (`regger/gui.py`)**
+   - Принимает email/телефон/прокси/код страны.
+   - Пароль генерируется автоматически (8 символов, 1 заглавная, 1 строчная, 1 число, 1 спецсимвол).
+   - Показывает окна для ввода ссылки и SMS-кода, включая смену номера.
+   - Сохраняет cookies в отдельную папку.
 
 2. **Провайдеры кодов (`regger/providers/*`)**
    - IMAP-провайдер извлекает ссылку подтверждения из письма.
@@ -21,7 +22,7 @@
 3. **Браузерный сценарий (`regger/browser_workflow.py`)**
    - Автоматизирует страницу регистрации в браузере.
    - Переходит по ссылке подтверждения из письма.
-   - Вводит SMS-код вручную.
+   - Вводит SMS-код вручную, поддерживает смену номера.
    - Экспортирует cookies браузера.
 
 4. **Хранилище (`regger/storage.py`)**
@@ -29,19 +30,9 @@
 
 ## Формат данных
 
-### Входной CSV
+### Cookies
 
-```csv
-email,phone
-user1@example.com,+15550000001
-```
-
-### Выходной CSV
-
-```csv
-email,phone,user_id,password,token,cookies
-user1@example.com,+15550000001,12345,MyPassword!,eyJhbGciOi...,"{\"sessionid\": \"...\"}"
-```
+Cookies сохраняются отдельными файлами JSON в папку, указанную в GUI.
 
 ## Конфигурация
 
@@ -65,10 +56,16 @@ user1@example.com,+15550000001,12345,MyPassword!,eyJhbGciOi...,"{\"sessionid\": 
     "email_selector": "#email",
     "password_selector": "#password",
     "submit_selector": "button[type=submit]",
+    "account_type_selector": "#account-type",
+    "account_type_value": "Privat",
+    "name_selector": "#account-name",
+    "name_value": "Privat",
     "phone_selector": "#phone",
     "phone_submit_selector": "#phone-submit",
+    "country_selector": "#country-code",
     "sms_code_selector": "#sms_code",
     "sms_submit_selector": "#sms-submit",
+    "change_number_selector": "#change-number",
     "phone_stage": "after_email_confirm"
   },
   "polling": {
@@ -91,11 +88,7 @@ python -m playwright install
 
 2. Заполните блок `browser` в `config.json` (селекторы для вашей формы).
 
-3. Запустите:
-
-```bash
-python -m regger.cli --config config.json --output data/output.csv --interactive --email-mode link
-```
+3. Запустите GUI и заполните поля.
 
 ### Графический интерфейс (GUI)
 
@@ -106,11 +99,12 @@ python -m regger.gui
 ```
 
 В GUI можно указать:
-- `config.json`
-- email/phone/password
+- email/phone
 - прокси
-- режим подтверждения email (фиксирован на link)
-- путь для сохранения CSV
+- код страны
+- папку для cookies
+
+В окне ввода SMS можно написать `change`, чтобы перейти к смене номера (если задан `change_number_selector`).
 
 ### Сборка EXE (Windows)
 
@@ -156,4 +150,4 @@ python -m playwright install
 
 2. Скопируйте `config.example.json` в `config.json` и заполните IMAP и селекторы формы.
 
-3. Запустите GUI или CLI (браузерный режим).
+3. Запустите GUI (браузерный режим).

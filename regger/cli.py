@@ -31,8 +31,21 @@ def load_inputs(path: str | Path) -> List[Tuple[str, str]]:
 
 
 def generate_password(length: int) -> str:
-    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+    length = max(length, 8)
+    lower = "abcdefghijklmnopqrstuvwxyz"
+    upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    digits = "0123456789"
+    special = "!@#$%^&*"
+    required = [
+        secrets.choice(upper),
+        secrets.choice(lower),
+        secrets.choice(special),
+        secrets.choice(digits),
+    ]
+    pool = lower + upper + digits + special
+    required.extend(secrets.choice(pool) for _ in range(length - len(required)))
+    secrets.SystemRandom().shuffle(required)
+    return "".join(required)
 
 
 def configure_logging(level: str) -> None:
@@ -56,6 +69,10 @@ def run_workflow(
     password: str | None,
     password_length: int,
     cancel_token: CancelToken,
+    country_code: str | None = None,
+    followup_link_provider=None,
+    sms_code_provider=None,
+    phone_provider=None,
 ) -> List[AccountRecord]:
     if settings.email_confirmation_mode != "link":
         raise ValueError("Browser mode requires email confirmation by link.")
@@ -64,7 +81,15 @@ def run_workflow(
     results: List[AccountRecord] = []
     for email, phone in inputs:
         current_password = password or generate_password(password_length)
-        record = workflow.run(email=email, phone=phone, password=current_password)
+        record = workflow.run(
+            email=email,
+            phone=phone,
+            password=current_password,
+            country_code=country_code,
+            followup_link_provider=followup_link_provider,
+            sms_code_provider=sms_code_provider,
+            phone_provider=phone_provider,
+        )
         results.append(record)
     return results
 
@@ -83,6 +108,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--email-mode",
         choices=["code", "link"],
         help="Email confirmation mode: code or link (overrides config)",
+    )
+    parser.add_argument(
+        "--country",
+        help="Country code value for dropdown selection (e.g. NL or +31)",
     )
     parser.add_argument(
         "--interactive",
@@ -134,6 +163,7 @@ def main() -> None:
             args.password,
             args.password_length,
             cancel_token,
+            country_code=args.country,
         )
     except CancelledError:
         logging.getLogger(__name__).warning("Операция отменена пользователем.")
